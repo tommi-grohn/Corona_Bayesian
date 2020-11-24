@@ -46,11 +46,10 @@ data {
   real<lower=0> alpha; // Death rate
   
   real<lower=0> traffic1[n_days];
-  real<lower=0> traffic2[n_days];
-  // real traffic3[n_days];
-  // real traffic4[n_days];
-  // real traffic5[n_days];
-  
+  #real<lower=0> traffic2[n_days];
+  #real<lower=0> traffic3[n_days];
+  #real<lower=0> traffic4[n_days];
+
   int<lower=0> deaths[n_days];
 }
 
@@ -60,18 +59,17 @@ transformed data {
 }
 
 parameters {
-  real c[2];
+  real c[1];
 }
 
 transformed parameters{
   real y[n_days, 4];
   real beta[n_days];
-  real x[n_days];  // seir-modeled deaths
   real<lower=0> lambda [n_days];  // seir-modeled deaths
 
   
   for (i in 1:n_days) {
-    beta[i] = c[1] * traffic1[i] + c[2] * traffic2[i];
+    beta[i] = c[1] * traffic1[i];# + c[2] * traffic2[i];
   }
   
   {
@@ -84,7 +82,6 @@ transformed parameters{
   }
   
   for (i in 1:n_days) {
-    // x[i] = alpha * y[i,4];
     lambda[i] = alpha * y[i,3] / D_i;
   }
   
@@ -92,7 +89,7 @@ transformed parameters{
 
 model {
   //priors
-  c ~ normal(0, 10);
+  c ~ lognormal(-2, 2); // Reasonable looking, weakly informative?  
   
   //sampling distribution
   for (i in 1:n_days) {
