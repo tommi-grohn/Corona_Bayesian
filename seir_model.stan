@@ -46,7 +46,7 @@ data {
   real<lower=0> alpha; // Death rate
   
   real<lower=0> traffic1[n_days];
-  // real<lower=0> traffic2[n_days];
+  real<lower=0> traffic2[n_days];
   // real traffic3[n_days];
   // real traffic4[n_days];
   // real traffic5[n_days];
@@ -60,8 +60,7 @@ transformed data {
 }
 
 parameters {
-  real c1;
-  // real c2;
+  real c[2];
 }
 
 transformed parameters{
@@ -72,7 +71,7 @@ transformed parameters{
 
   
   for (i in 1:n_days) {
-    beta[i] = c1 * traffic1[i] ;// + c2 * traffic2[i];
+    beta[i] = c[1] * traffic1[i] + c[2] * traffic2[i];
   }
   
   {
@@ -85,7 +84,7 @@ transformed parameters{
   }
   
   for (i in 1:n_days) {
-    x[i] = alpha * y[i,4];
+    // x[i] = alpha * y[i,4];
     lambda[i] = alpha * y[i,3] / D_i;
   }
   
@@ -93,8 +92,7 @@ transformed parameters{
 
 model {
   //priors
-  c1 ~ normal(0, 10);
-  // c2 ~ normal(0, 10);
+  c ~ normal(0, 10);
   
   //sampling distribution
   for (i in 1:n_days) {
