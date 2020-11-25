@@ -1,5 +1,5 @@
 functions {
-  real[] sir(real t, real[] y, real[] theta, 
+  real[] seir(real t, real[] y, real[] theta, 
              real[] x_r, int[] x_i) {
     
       int N = x_i[1];
@@ -46,9 +46,9 @@ data {
   real<lower=0> alpha; // Death rate
   
   real<lower=0> traffic1[n_days];
-  #real<lower=0> traffic2[n_days];
-  #real<lower=0> traffic3[n_days];
-  #real<lower=0> traffic4[n_days];
+  real<lower=0> traffic2[n_days];
+  real<lower=0> traffic3[n_days];
+  real<lower=0> traffic4[n_days];
 
   int<lower=0> deaths[n_days];
 }
@@ -59,7 +59,7 @@ transformed data {
 }
 
 parameters {
-  real c[1];
+  real<lower=0> c[4];
 }
 
 transformed parameters{
@@ -69,7 +69,7 @@ transformed parameters{
 
   
   for (i in 1:n_days) {
-    beta[i] = c[1] * traffic1[i];# + c[2] * traffic2[i];
+    beta[i] = c[1] * traffic1[i]; // + c[2] * traffic2[i]; // + c[3] * traffic3[i] + c[4] * traffic4[i];
   }
   
   {
@@ -78,7 +78,7 @@ transformed parameters{
     theta[n_days+1] = D_e;
     theta[n_days+2] = D_i;
 
-    y = integrate_ode_rk45(sir, y0, t0, ts, theta, x_r, x_i);
+    y = integrate_ode_rk45(seir, y0, t0, ts, theta, x_r, x_i);
   }
   
   for (i in 1:n_days) {
@@ -89,7 +89,7 @@ transformed parameters{
 
 model {
   //priors
-  c ~ lognormal(-2, 2); // Reasonable looking, weakly informative?  
+  c ~ exponential(1); // Reasonable looking, weakly informative?  
   
   //sampling distribution
   for (i in 1:n_days) {
