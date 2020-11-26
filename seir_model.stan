@@ -5,9 +5,8 @@ functions {
       int N = x_i[1];
       int n_days = x_i[2];
     
-      real beta = theta[1];
-      real D_e = theta[n_days + 1];
-      real D_i = theta[n_days + 2];
+      real D_e = x_r[1];
+      real D_i = x_r[2];
 
       real S = y[1];
       real E = y[2];
@@ -18,12 +17,8 @@ functions {
       real dE_dt;
       real dI_dt;
       real dR_dt;
-      
-      for (i in 2:n_days) {
-        if (i <= t) {
-          beta = theta[i];
-        }
-      }
+
+      beta = sum(theta * tc_t)
 
       dS_dt = -beta * I * S / N;
       dE_dt =  beta * I * S / N - E / D_e;
@@ -54,30 +49,20 @@ data {
 }
 
 transformed data {
-  real x_r[0];
+  real x_r[2] = { D_e, D_i};
   int  x_i[2] = { N,  n_days};
 }
 
 parameters {
-  real<lower=0> c[4];
+  real<lower=1e-9> theta[4];
 }
 
 transformed parameters{
   real y[n_days, 4];
-  real beta[n_days];
   real<lower=0> lambda [n_days];  // seir-modeled deaths
-
   
-  for (i in 1:n_days) {
-    beta[i] = c[1] * traffic1[i]; // + c[2] * traffic2[i]; // + c[3] * traffic3[i] + c[4] * traffic4[i];
-  }
   
   {
-    real theta[n_days + 2];
-    theta[1:n_days] = beta;
-    theta[n_days+1] = D_e;
-    theta[n_days+2] = D_i;
-
     y = integrate_ode_rk45(seir, y0, t0, ts, theta, x_r, x_i);
   }
   
@@ -89,7 +74,7 @@ transformed parameters{
 
 model {
   //priors
-  c ~ exponential(1); // Reasonable looking, weakly informative?  
+  theta ~ exponential(1); // Reasonable looking, weakly informative?  
   
   //sampling distribution
   for (i in 1:n_days) {
