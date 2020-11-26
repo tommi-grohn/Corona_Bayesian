@@ -26,16 +26,13 @@ functions {
       int N = x_i[1];
       int n_days = x_i[2];
       int n_tc = x_i[3];
-      int components = size(theta);
 
       real beta;
       vector[n_tc] tc_t;
       matrix[n_days, n_tc] traffic;
-      real D_e = x_r[1];
-      real D_i = x_r[2];
+      real D_e = x_r[(n_tc + 1)*n_days + 1];
+      real D_i = x_r[(n_tc + 1)*n_days + 2];
 
-      matrix[n_days, n_tc] tc; 
-      vector[n_days] ts = to_vector(x_r[n_days*n_tc+1:]); 
 
       real S = y[1];
       real E = y[2];
@@ -47,15 +44,16 @@ functions {
       real dI_dt;
       real dR_dt;
 
+      matrix[n_days, n_tc] tc; 
+      vector[n_days] ts = to_vector(x_r[n_days * n_tc + 1:(n_tc + 1)*n_days]); 
       for (i in 1:n_days) {
         for (j in 1:n_tc) {
 	  traffic[i, j] = x_r[j + (i-1) * n_tc];
 	}
       }
-
       tc_t = tc_interpolate(t, ts, tc, n_tc);
 
-      beta = dot_product(to_vector(theta), tc_t);
+      beta = dot_product([theta[1]], tc_t) + theta[2];
 
       dS_dt = -beta * I * S / N;
       dE_dt =  beta * I * S / N - E / D_e;
@@ -84,17 +82,19 @@ data {
 
 transformed data {
   int  x_i[3] = { N,  n_days, n_tc};
-  real x_r[(n_tc + 1)*n_days];
+  real x_r[(n_tc + 1)*n_days+2];
   for (i in 1:n_days) {
     for (j in 1:n_tc) {
       x_r[j + (i-1) * n_tc] = traffic[i, j];
     }
   }
-  x_r[n_days * n_tc + 1:] = ts;
+  x_r[n_days * n_tc + 1:(n_tc + 1)*n_days] = ts;
+  x_r[(n_tc + 1)*n_days + 1] = D_e;
+  x_r[(n_tc + 1)*n_days + 2] = D_i;
 }
 
 parameters {
-  real theta[n_tc];
+  real<lower=1e-9> theta[2];
 }
 
 transformed parameters{
@@ -114,7 +114,7 @@ transformed parameters{
 
 model {
   //priors
-  theta ~ normal(0, 1);
+  theta ~ normal(0.5, 0.2);
   
   //sampling distribution
   for (i in 1:n_days) {
