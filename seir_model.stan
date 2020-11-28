@@ -69,7 +69,7 @@ transformed parameters{
 
   
   for (i in 1:n_days) {
-    beta[i] = c[1] * traffic1[i] + c[2] * traffic2[i] ;//+ c[3] * traffic3[i] + c[4] * traffic4[i];
+    beta[i] = c[1] * traffic1[i] + c[2]; // * traffic2[i] ;//+ c[3] * traffic3[i] + c[4] * traffic4[i];
   }
   
   {
@@ -89,7 +89,7 @@ transformed parameters{
 
 model {
   //priors
-  c ~ exponential(1); // Reasonable looking, weakly informative?  
+  c ~ normal(1,1); // Reasonable looking, weakly informative?  
   
   //sampling distribution
   for (i in 1:n_days) {
