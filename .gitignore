@@ -1,0 +1,11 @@
+# notebook ignores
+__pycache__/
+env/
+.ipynb_checkpoints/
+
+# R
+.RData
+.Rhistory
+
+# stan
+*.pkl
