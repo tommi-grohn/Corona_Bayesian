@@ -4,8 +4,11 @@ functions {
     
       int N = x_i[1];
       int n_training = x_i[2];
+    
       real D_e = x_r[1];
       real D_i = x_r[2];
+
+      real beta = theta[1];
 
       real S = y[1];
       real E = y[2];
@@ -16,8 +19,6 @@ functions {
       real dE_dt;
       real dI_dt;
       real dR_dt;
-
-      real beta = theta[1];
       
       for (i in 2:n_training) {
         if (i <= t) {
@@ -36,54 +37,38 @@ functions {
 
 data {
   int<lower=1>  n_training;
-  int<lower=0>  n_prediction;
   int<lower=0>  n_tcomponents;
   real<lower=0> y0[4];  // 4 stages
-  
   real<lower=0> t0;
-  real<lower=0> t_training[n_training];
-  real<lower=0> t_prediction[n_prediction];
-  
+  real t_training[n_training];
   int<lower=1>  N;
-  
   real<lower=0> D_e;
   real<lower=0> D_i;
   real<lower=0> alpha; // Death rate
-  int<lower=0> deaths[n_training + n_prediction];
   matrix[n_training, n_tcomponents] traffic;
+  vector[n_tcomponents+1] traffic_coeff;
 }
 
 transformed data {
-  real x_r[2] = {D_e, D_i};
+  real x_r[2] = { D_e, D_i};
   int  x_i[2] = { N,  n_training};
-}
-
-parameters {
-  real<lower=0> c;
-}
-
-transformed parameters{
-  real y[n_training, 4];
-  real beta[n_training];
-  vector<lower=0>[n_training] lambda ;  // seir-modeled deaths
-
-  
-  for (i in 1:n_training) {
-    beta[i] = c;
+  real theta[n_training];
+  if (n_tcomponents > 0) {
+    vector[n_training] beta = rep_vector(traffic_coeff[1], n_training);
+    beta = beta + traffic * traffic_coeff[2:];
+    for (i in 1:n_training) {
+      theta[i] = beta[i];
+    }
   }
-  
-  y = integrate_ode_rk45(seir, y0, t0, t_training, beta, x_r, x_i);
-  lambda = alpha * to_vector(y[,3]) / D_i;
-}
-
-model {
-  //priors
-  c ~ normal(1,1); // Reasonable looking, weakly informative?  
-  
-  //sampling distribution
-  deaths ~ poisson(lambda);
+  else {
+    theta = rep_array(traffic_coeff[1], n_training);
+  }
 }
 
 generated quantities {
-  int deaths_hat[n_training] = poisson_rng(lambda);
+  real deaths[n_training];
+  vector[n_training] lambda;
+  real y[n_training, 4] = integrate_ode_rk45(seir, y0, t0, t_training, theta, x_r, x_i);
+  lambda = alpha * to_vector(y[, 3]) / D_i;
+  deaths = poisson_rng(lambda);
 }
