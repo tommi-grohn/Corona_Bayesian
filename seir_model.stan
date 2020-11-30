@@ -59,26 +59,32 @@ transformed data {
 }
 
 parameters {
-  real<lower=0> c;
+  vector[n_tcomponents+1] traffic_coeff;
 }
 
 transformed parameters{
   real y[n_training, 4];
-  real beta[n_training];
+  real theta[n_training];
   vector<lower=0>[n_training] lambda ;  // seir-modeled deaths
 
-  
-  for (i in 1:n_training) {
-    beta[i] = c;
+  if (n_tcomponents > 0) {
+    vector[n_training] beta = rep_vector(traffic_coeff[1], n_training);
+    beta = beta + traffic * traffic_coeff[2:];
+    for (i in 1:n_training) {
+      theta[i] = beta[i];
+    }
+  }
+  else {
+    theta = rep_array(traffic_coeff[1], n_training);
   }
   
-  y = integrate_ode_rk45(seir, y0, t0, t_training, beta, x_r, x_i);
+  y = integrate_ode_rk45(seir, y0, t0, t_training, theta, x_r, x_i);
   lambda = alpha * to_vector(y[,3]) / D_i;
 }
 
 model {
   //priors
-  c ~ normal(1,1); // Reasonable looking, weakly informative?  
+  traffic_coeff ~ normal(1,1); // Reasonable looking, weakly informative?  
   
   //sampling distribution
   deaths ~ poisson(lambda);
