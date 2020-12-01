@@ -55,13 +55,13 @@ data {
   
   int<lower=1>  N;
   
-  real<lower=0> D_e;  // average exposure time 
-  real<lower=0> D_p;  // average presymptomatic time 
-  real<lower=0> D_i;  // average infected time
-  real<lower=0> r;  // average infected time
-  real<lower=0> r_a;  // average infected time
-  real<lower=0> r_p;  // average infected time
-  real<lower=0> alpha;  // death rate
+  real<lower=0> D_e;   // average exposure time 
+  real<lower=0> D_p;   // average presymptomatic time 
+  real<lower=0> D_i;   // average infected time
+  real<lower=0> r;     // proportion of asymptotic cases out of all infected
+  real<lower=0> r_a;   // coefficient of asymptomatics
+  real<lower=0> r_p;   // coefficient of presymptomatics
+  real<lower=0> alpha; // death rate
   
   int<lower=0> deaths[n_training];
   matrix[n_training, n_tcomponents] traffic;
