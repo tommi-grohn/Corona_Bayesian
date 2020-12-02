@@ -68,18 +68,18 @@ data {
 }
 
 transformed data {
-  real x_r[6] = {D_e, D_p, D_i, r, r_a, r_p};
-  int  x_i[2] = { N, n_training};
+  real<lower=0> x_r[6] = {D_e, D_p, D_i, r, r_a, r_p};
+  int<lower=0>  x_i[2] = { N, n_training};
 }
 
 parameters {
-  vector[n_tcomponents+1] traffic_coeff;
+  vector<lower=0>[n_tcomponents+1] traffic_coeff;
 }
-
+ 
 transformed parameters{
-  real y[n_training, 6];
-  real theta[n_training];
-  vector<lower=0>[n_training] lambda ;  // seir-modeled deaths
+  real<lower=0> y[n_training, 6];
+  real<lower=0> theta[n_training];
+  vector<lower=0>[n_training] lambda;  // seir-modeled deaths
 
   if (n_tcomponents > 0) {
     vector[n_training] beta = rep_vector(traffic_coeff[1], n_training);
@@ -98,12 +98,12 @@ transformed parameters{
 
 model {
   //priors
-  traffic_coeff ~ normal(2,3); // Reasonable looking, weakly informative?  
+  traffic_coeff ~ uniform(0,0.4); // Reasonable looking, weakly informative?  
   
   //sampling distribution
   deaths ~ poisson(lambda);
 }
 
 generated quantities {
-  int deaths_hat[n_training] = poisson_rng(lambda);
-}
+  int<lower=0> deaths_hat[n_training] = poisson_rng(lambda);
+ }
