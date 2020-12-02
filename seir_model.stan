@@ -93,7 +93,7 @@ transformed parameters{
   }
   
   y = integrate_ode_rk45(seir, y0, t0, t_training, theta, x_r, x_i);
-  lambda = alpha * to_vector(y[,5]) / D_i;
+  lambda = 0.005 * to_vector(y[,5]) / 20;
 }
 
 model {
