@@ -118,7 +118,7 @@ generated quantities {
   real<lower=1e-9> y_hat[n_sum, 6];
   int deaths_hat[n_sum];
   vector[n_sum] lambda_hat;
-  real log_lik[n_test];
+  real log_lik;
 
   x_i_test = { N, n_sum, n_tcomponents };
   for (i in 1:n_sum) {
@@ -137,7 +137,5 @@ generated quantities {
   y_hat = integrate_ode_rk45(seapir, y0, t0, append_array(t_training, t_test), traffic_coeff, x_r_test, x_i_test);
   lambda_hat = 0.008 * to_vector(y_hat[,5]) / 20;
   deaths_hat = poisson_rng(lambda_hat);
-  for (i in 1:n_test) {
-    log_lik[i] = poisson_lpmf(deaths_pred[i] | lambda_hat[n_training+i]);
-  }
+  log_lik = poisson_lpmf(deaths_pred | lambda_hat[n_training + 1:]);
 }
