@@ -74,7 +74,7 @@ transformed data {
 
 parameters {
   real<lower=0> c1;
-  real<lower=0> c2;
+  real c2;
 }
  
 transformed parameters{
@@ -98,7 +98,7 @@ transformed parameters{
 model {
   //priors
   c1 ~ uniform(0,1); // Reasonable looking, weakly informative?  
-  c2 ~ normal(0,4); // Reasonable looking, weakly informative?  
+  c2 ~ normal(0,2); // Reasonable looking, weakly informative?  
 
   
   //sampling distribution
