@@ -1,5 +1,6 @@
+
 functions {
-  real[] seir(real t, real[] y, real[] theta, 
+  real[] seapir(real t, real[] y, real[] theta, 
              real[] x_r, int[] x_i) {
     
       int N = x_i[1];
@@ -56,13 +57,16 @@ functions {
 }
 
 data {
+  real prior_means[2];
+  real prior_stds[2];
+    
   int<lower=1>  n_training;
+  int<lower=0>  n_test;
   int<lower=0>  n_tcomponents;
   real<lower=0> y0[6];  // 6 stages
-  
   real<lower=0> t0;
   real<lower=0> t_training[n_training];
-  
+  real<lower=0> t_test[n_test];
   int<lower=1>  N;
   
   real<lower=0> D_e;   // average exposure time 
@@ -74,13 +78,16 @@ data {
   real<lower=0> alpha; // death rate
   
   int<lower=0> deaths[n_training];
+  int<lower=0> deaths_pred[n_test];
   matrix[n_training, n_tcomponents] traffic;
+  matrix[n_test, n_tcomponents] traffic_pred;
 }
 
 transformed data {
+  int n_sum = n_training + n_test;
   int  x_i[3] = { N, n_training, n_tcomponents};
   real x_r[(n_tcomponents + 1)*n_training+6];
-    for (i in 1:n_training) {
+  for (i in 1:n_training) {
     for (j in 1:n_tcomponents) {
       x_r[j + (i-1) * n_tcomponents] = traffic[i, j];
     }
@@ -90,25 +97,52 @@ transformed data {
 }
 
 parameters {
-  real traffic_coeff[n_tcomponents+1];
+  real <lower=0> constant;
+  real traffic_slope[n_tcomponents];
 }
 
 transformed parameters{
-  real y[n_training, 6];
-  vector<lower=0>[n_training] lambda ;  // seir-modeled deaths
+  real traffic_coeff[n_tcomponents+1] = append_array({constant}, traffic_slope);
+  real<lower=1e-9> y[n_training, 6];
+  vector<lower=1e-9>[n_training] lambda ;  // seir-modeled deaths
 
-  y = integrate_ode_rk45(seir, y0, t0, t_training, traffic_coeff, x_r, x_i);
+  y = integrate_ode_rk45(seapir, y0, t0, t_training, traffic_coeff, x_r, x_i);
   lambda = 0.008 * to_vector(y[,5]) / 20;  
 }
 
 model {
   //priors
-  traffic_coeff ~ normal(2,3); // Reasonable looking, weakly informative?  
-  
+  constant ~ normal(prior_means[1], prior_stds[1]); // weakly informative
+  traffic_slope ~ normal(prior_means[2], prior_stds[2]); // weakly informative      
+    
   //sampling distribution
   deaths ~ poisson(lambda);
 }
 
 generated quantities {
-  int deaths_hat[n_training] = poisson_rng(lambda);
+  real x_r_test[(n_tcomponents + 1)*n_sum+6];
+  int x_i_test[3];
+  real<lower=1e-9> y_hat[n_sum, 6];
+  int deaths_hat[n_sum];
+  vector[n_sum] lambda_hat;
+  real log_lik;
+
+  x_i_test = { N, n_sum, n_tcomponents };
+  for (i in 1:n_sum) {
+    for (j in 1:n_tcomponents) {
+      if (i < n_training + 1) {
+        x_r_test[j + (i-1) * n_tcomponents] = traffic[i, j];
+      }
+      else {
+        x_r_test[j + (i-1) * n_tcomponents] = traffic_pred[i-n_training, j];
+      }
+    }
+  }
+  x_r_test[n_sum * n_tcomponents + 1:(n_tcomponents + 1)*n_sum] = append_array(t_training, t_test);
+  x_r_test[(n_tcomponents + 1)*n_sum + 1:(n_tcomponents + 1)*n_sum + 6] = {D_e, D_p, D_i, r, r_a, r_p};
+
+  y_hat = integrate_ode_rk45(seapir, y0, t0, append_array(t_training, t_test), traffic_coeff, x_r_test, x_i_test);
+  lambda_hat = 0.008 * to_vector(y_hat[,5]) / 20;
+  deaths_hat = poisson_rng(lambda_hat);
+  log_lik = poisson_lpmf(deaths_pred | lambda_hat[n_training + 1:]);
 }
