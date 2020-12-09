@@ -87,6 +87,10 @@ transformed data {
   int n_sum = n_training + n_test;
   int  x_i[3] = { N, n_training, n_tcomponents};
   real x_r[(n_tcomponents + 1)*n_training+6];
+    
+  real x_r_test[(n_tcomponents + 1)*n_sum+6];
+  int x_i_test[3];
+    
   for (i in 1:n_training) {
     for (j in 1:n_tcomponents) {
       x_r[j + (i-1) * n_tcomponents] = traffic[i, j];
@@ -94,11 +98,26 @@ transformed data {
   }
   x_r[n_training * n_tcomponents + 1:(n_tcomponents + 1)*n_training] = t_training;
   x_r[(n_tcomponents + 1)*n_training + 1:(n_tcomponents + 1)*n_training + 6] = {D_e, D_p, D_i, r, r_a, r_p};
+  
+  x_i_test = { N, n_sum, n_tcomponents };
+  for (i in 1:n_sum) {
+    for (j in 1:n_tcomponents) {
+      if (i < n_training + 1) {
+        x_r_test[j + (i-1) * n_tcomponents] = traffic[i, j];
+      }
+      else {
+        x_r_test[j + (i-1) * n_tcomponents] = traffic_pred[i-n_training, j];
+      }
+    }
+  }
+  x_r_test[n_sum * n_tcomponents + 1:(n_tcomponents + 1)*n_sum] = append_array(t_training, t_test);
+  x_r_test[(n_tcomponents + 1)*n_sum + 1:(n_tcomponents + 1)*n_sum + 6] = {D_e, D_p, D_i, r, r_a, r_p};
+
 }
 
 parameters {
   real <lower=0> constant;
-  real traffic_slope[n_tcomponents];
+  real<lower=0> traffic_slope[n_tcomponents];
 }
 
 transformed parameters{
@@ -120,26 +139,10 @@ model {
 }
 
 generated quantities {
-  real x_r_test[(n_tcomponents + 1)*n_sum+6];
-  int x_i_test[3];
   real<lower=1e-9> y_hat[n_sum, 6];
   int deaths_hat[n_sum];
   vector[n_sum] lambda_hat;
   real log_lik;
-
-  x_i_test = { N, n_sum, n_tcomponents };
-  for (i in 1:n_sum) {
-    for (j in 1:n_tcomponents) {
-      if (i < n_training + 1) {
-        x_r_test[j + (i-1) * n_tcomponents] = traffic[i, j];
-      }
-      else {
-        x_r_test[j + (i-1) * n_tcomponents] = traffic_pred[i-n_training, j];
-      }
-    }
-  }
-  x_r_test[n_sum * n_tcomponents + 1:(n_tcomponents + 1)*n_sum] = append_array(t_training, t_test);
-  x_r_test[(n_tcomponents + 1)*n_sum + 1:(n_tcomponents + 1)*n_sum + 6] = {D_e, D_p, D_i, r, r_a, r_p};
 
   y_hat = integrate_ode_rk45(seapir, y0, t0, append_array(t_training, t_test), traffic_coeff, x_r_test, x_i_test);
   lambda_hat = 0.008 * to_vector(y_hat[,5]) / 20;
