@@ -44,7 +44,10 @@ functions {
         beta = beta + to_vector(x_r[component_place + 1:component_place + n_tcomponents])' * to_vector(theta[2:]);
       }
       
-
+      if (beta < 0) {
+          beta = 0;
+      }
+      
       dS_dt = - (r_a*beta*S*A/N + r_p*beta*S*P/N + beta*S*I/N);
       dE_dt =  r_a*beta*S*A/N + r_p*beta*S*P/N + beta*S*I/N - E/D_e;
       dA_dt =  r*E/D_e - A/D_i;
