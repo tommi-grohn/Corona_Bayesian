@@ -120,7 +120,7 @@ transformed data {
 
 parameters {
   real <lower=0> constant;
-  real<lower=0> traffic_slope[n_tcomponents];
+  real traffic_slope[n_tcomponents];
 }
 
 transformed parameters{
