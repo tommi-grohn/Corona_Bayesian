@@ -57,8 +57,8 @@ functions {
 }
 
 data {
-  real prior_means[2];
-  real prior_stds[2];
+  real prior_means;
+  real prior_stds;
     
   int<lower=1>  n_training;
   int<lower=0>  n_test;
@@ -116,14 +116,14 @@ transformed data {
 }
 
 parameters {
-  real <lower=0> constant;
-  real<lower=0> traffic_slope[n_tcomponents];
+  real<lower=0> constant;
+  real traffic_slope[n_tcomponents];
 }
 
 transformed parameters{
   real traffic_coeff[n_tcomponents+1] = append_array({constant}, traffic_slope);
-  real<lower=1e-9> y[n_training, 6];
-  vector<lower=1e-9>[n_training] lambda ;  // seir-modeled deaths
+  real<lower=0> y[n_training, 6];
+  vector<lower=0>[n_training] lambda ;  // seir-modeled deaths
 
   y = integrate_ode_rk45(seapir, y0, t0, t_training, traffic_coeff, x_r, x_i);
   lambda = 0.008 * to_vector(y[,5]) / 20;  
@@ -131,15 +131,15 @@ transformed parameters{
 
 model {
   //priors
-  constant ~ normal(prior_means[1], prior_stds[1]); // weakly informative
-  traffic_slope ~ normal(prior_means[2], prior_stds[2]); // weakly informative      
+  constant ~ normal(prior_means, prior_stds); // weakly informative
+  traffic_slope ~ normal(prior_means, prior_stds); // weakly informative      
     
   //sampling distribution
   deaths ~ poisson(lambda);
 }
 
 generated quantities {
-  real<lower=1e-9> y_hat[n_sum, 6];
+  real<lower=0> y_hat[n_sum, 6];
   int deaths_hat[n_sum];
   vector[n_sum] lambda_hat;
   real log_lik;
